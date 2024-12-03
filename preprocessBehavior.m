@@ -1,4 +1,4 @@
-function [KpInterp, KpStr, frameRate] = preprocessBehavior(d,sid,face_model,base_dir,dewarp_align)
+function [KpInterp, KpStr, frameRate,d] = preprocessBehavior(d,sid,face_model,base_dir,dewarp_align)
 
 filelist = dir([base_dir face_model '/*.h5']);
 filelist = {filelist.name}';
@@ -68,7 +68,7 @@ KpLiStr(9) = "nosetipLike";
 %% get video intan alignment paras
 required_fields = {'LED_on_trigger_snout','LED_off_trigger_snout','LED_on_trigger_intan'};
 for rfx = find(~contains(required_fields,fieldnames(d.info)))
-   eval(['d.info.' required_fields{rfx} ' = []'])
+   eval(['d.info(1).' required_fields{rfx} ' = [];'])
 end
 
 if any(cellfun(@isempty,{d.info(sid).LED_on_trigger_snout d.info(sid).LED_off_trigger_snout d.info(sid).LED_on_trigger_intan}))
@@ -153,7 +153,7 @@ for kx = 1:size(KpInterp,2)
 end
 
 if dewarp_align
-    %% handle warping (30Hz videos are affected)
+    %% handle warping (30Hz videos are affected)   
     if isfield(d.info,'timewarp_snout')
         if round(d.info(sid).timewarp_snout,3)~=1
             curr_warpfactor = d.info(sid).timewarp_snout;

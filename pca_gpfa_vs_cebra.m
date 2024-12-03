@@ -22,6 +22,20 @@ scatter(score(:,3),score(:,4),2,cebra_cmap(discrete+1,:));
 % GPFA
 % check paper first!
 
+% 
+% [KpInterp, KpStr, frameRate,d] = preprocessBehavior(d,sid,face_model,base_dir);
+% spectral = positionToSpectral(KpInterp,20);
+% 
+% zscore
+% 
+% [~,lip_pca] = pca(reshape(spectral(1:2,:,:),size(spectral,2:3).*[2 1])');
+% [~,lipy_pca] = pca(squeeze(spectral(1,:,:))');
+% 
+% cla
+% scatter(lip_pca(:,1),lip_pca(:,2),3,cebra_cmap(state_matrix+1,:))
+% cla
+% scatter(lip_pca(:,3),lip_pca(:,4),1,cebra_cmap(state_matrix+1,:))
+% 
 
 end
 

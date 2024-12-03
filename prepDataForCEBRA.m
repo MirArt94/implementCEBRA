@@ -27,7 +27,7 @@ for sx = 1:numel(sids)
     else
         uids = uids_all(d.map(uids_all)==sids(sx));
     end
-%     spike_matrix = cell2mat(get_continuous_ifr(d,uids,sample_rate));
+    spike_matrix = cell2mat(get_continuous_ifr(d,uids,sample_rate));
     
     %% behavior - lip , nose, paw - as continuous context variable
     % - x,y-position
@@ -47,6 +47,7 @@ for sx = 1:numel(sids)
     
     % - wavelet PCA, take first 4 PCs 
     behavior_pc = zeros(numel(labels_xy)/2,4,size(behavior_cwt,3));
+%     #zscore
     for lx = 2:2:numel(labels_xy)
         [~,tmp] = pca([squeeze(behavior_cwt(lx-1,:,:))' squeeze(behavior_cwt(lx,:,:))']);
         behavior_pc(lx/2,:,:) = tmp(:,1:4)';
