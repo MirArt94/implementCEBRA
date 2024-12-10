@@ -1,16 +1,27 @@
 %% PCA and GPFA plots from CEBRA input
 % tmp = h5info(input_file);
-function pca_gpfa_vs_cebra
-cebra_cmap = get_cebra_cmap;
-neural = h5read(input_file,['/neural_' num2str(sids(sx))])';
-discrete  = h5read(input_file,['/discrete_' num2str(sids(sx))])';
+function pca_gpfa_vs_cebra(input_file,sids)
 
+for sx = 1:numel(sids)
+cebra_cmap = get_cebra_cmap;
+neural = h5read(input_file,['/ifr_' num2str(sids(sx))])';
+discrete  = h5read(input_file,['/discrete_' num2str(sids(sx))])';
+continuous2 = h5read(input_file,['/spectral_lowlipY_' num2str(sids(sx))])';
+timestamps = h5read(input_file,['/timestamps_' num2str(sids(sx))])';
+trial_matrix = h5read(input_file,['/trialmatrix_' num2str(sids(sx))])';
+
+ if size(timestamps,1)==450
+    tmp = timestamps;
+    timestamps = [tmp(1:150),tmp(151:300),tmp(301:450)];
+    tmp = trial_matrix;
+    trial_matrix = [tmp(1:150),tmp(151:300),tmp(301:450)];
+ end
 % zscore
 tmp = neural;
-neural = (tmp-mean(tmp,2))/std(tmp,1,2);
+neural = (tmp-mean(tmp,1))./std(tmp,1,1);
 
 % PCA
-[coeff,score] = pca(neural);
+[coeff,score] = pca(continuous);
 
 clf
 tiledlayout(1,2)
@@ -37,6 +48,7 @@ scatter(score(:,3),score(:,4),2,cebra_cmap(discrete+1,:));
 % scatter(lip_pca(:,3),lip_pca(:,4),1,cebra_cmap(state_matrix+1,:))
 % 
 
+end
 end
 
 function cebra_cmap = get_cebra_cmap

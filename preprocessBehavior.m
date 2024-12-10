@@ -9,7 +9,7 @@ end
 
 % parameters
 try 
-    frameRate = d.info.framerate_snout;    
+    frameRate = round(d.info(sid).framerate_snout,2);    
     if frameRate == 20
         pxFrameThresh = 75; 
     elseif frameRate == 30
