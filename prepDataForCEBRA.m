@@ -28,25 +28,7 @@ trial_matrix = cell(numel(sids),1);
 timestamps = cell(numel(sids),1);
 
 %% loop over session
-for sx = 1:numel(sids)
-    %%  neural 
-    if isempty(uids_all)
-        uids = find(d.map==sids(sx));
-    else
-        uids = uids_all(d.map(uids_all)==sids(sx));
-    end
-    
-    % - as continuous ifr matrix
-    spike_matrix = cell2mat(get_continuous_ifr(d,uids,sample_rate));
-    
-    % - as binned spikecounts
-    spikes = d.spikes(uids);
-    binedges = 0:1/sample_rate:max([spikes{:}]);
-    spike_matrix_binned = zeros(numel(spikes),numel(binedges)-1);
-    for ux = 1:numel(spikes)
-        spike_matrix_binned(ux,:) = histcounts(spikes{ux},binedges);
-    end
-    
+for sx = 1:numel(sids)    
     %% behavior - lip , nose, paw - as continuous context variable
     % - x,y-position
     [behavior_xy, labels_xy, frameRate] = preprocessBehavior(d,sids(sx),face_model,base_dir);
@@ -71,6 +53,24 @@ for sx = 1:numel(sids)
         behavior_pc(lx/2,:,:) = tmp(:,1:4)';
     end
     labels_pc = "pc_" + extractBefore(labels_xy(2:2:end), strlength(labels_xy(2:2:end)));
+    %%  neural 
+    if isempty(uids_all)
+        uids = find(d.map==sids(sx));
+    else
+        uids = uids_all(d.map(uids_all)==sids(sx));
+    end
+    
+    % - as continuous ifr matrix
+    spike_matrix = cell2mat(get_continuous_ifr(d,uids,sample_rate));
+    
+    % - as binned spikecounts
+    spikes = d.spikes(uids);
+    binedges = 0:1/sample_rate:max([spikes{:}]);
+    spike_matrix_binned = zeros(numel(spikes),numel(binedges)-1);
+    for ux = 1:numel(spikes)
+        spike_matrix_binned(ux,:) = histcounts(spikes{ux},binedges);
+    end
+    
     %% paradigm states as discrete context variable
     events = d.events{1,sids(sx)};
     
