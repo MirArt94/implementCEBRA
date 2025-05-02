@@ -153,7 +153,25 @@ cbar.set_ticks(range(0,11)) # == 0:10 in matlab
 >>> cbar.set_ticklabels(labels)
     '''
     
+    # plot 2D plots of embeddings, visualizing all dimensions in one figure
+    fig = plt.figure(figsize=(24,8))
     
+    ax1 = plt.subplot(141)
+    ax1.scatter(cebra_justbehavior[:, 0], cebra_justbehavior[:, 1], s=1, c=discrete_context, cmap=cebra_cmap)
+    ax2 = plt.subplot(141)
+    ax2.scatter(cebra_justbehavior[:, 2], cebra_justbehavior[:, 3], s=1, c=discrete_context, cmap=cebra_cmap)
+    ax3 = plt.subplot(141)
+    ax3.scatter(cebra_justbehavior[:, 4], cebra_justbehavior[:, 5], s=1, c=discrete_context, cmap=cebra_cmap)
+    ax4 = plt.subplot(141)
+    ax4.scatter(cebra_justbehavior[:, 6], cebra_justbehavior[:, 7], s=1, c=discrete_context, cmap=cebra_cmap)
+    
+    ax2 = plt.subplot(142)
+    ax3 = plt.subplot(143)
+    ax4 = plt.subplot(144)
+    
+    
+    
+    # plotting as in CEBRA demo
     fig = plt.figure(figsize=(24,8))
     
     ax1 = plt.subplot(141, projection='3d')
@@ -171,7 +189,7 @@ cbar.set_ticks(range(0,11)) # == 0:10 in matlab
 
 def get_cebra_cmap():
     discrete_colors = np.array(
-            [[.5, .5, .5, 0], # ITI
+            [[.5, .5, .5, 1], # ITI
             [1, 0, 0, 1], # A
             [0.0039, 0.1765, 0.4314, 1], # B
             [1, 0, 1, 1], # aC
