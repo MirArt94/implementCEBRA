@@ -1,4 +1,5 @@
-function [KpInterp, KpStr, frameRate,d] = preprocessBehavior(d,sid,face_model,base_dir,dewarp_align)
+%% reads facemap output, processes coordinates, creates labeled video
+function [KpInterp, KpInterpMask, KpStr, frameRate,d] = preprocessBehavior(d,sid,face_model,base_dir,dewarp_align)
 
 filelist = dir([base_dir face_model '/*.h5']);
 filelist = {filelist.name}';
@@ -11,9 +12,9 @@ end
 try 
     frameRate = round(d.info(sid).framerate_snout,2);    
     if frameRate == 20
-        pxFrameThresh = 75; 
+        ops.pxFrameThresh = 75; 
     elseif frameRate == 30
-        pxFrameThresh = 50; 
+        ops.pxFrameThresh = 50; 
     elseif isnan(frameRate) || isempty(frameRate)
         error('take standard frameRate')
     else
@@ -22,18 +23,17 @@ try
     end
 catch
     if contains(d.path,'TD23')
-        dataset = "PMC2"; frameRate = 20; pxFrameThresh = 75; % framewise displacement
+        frameRate = 20; ops.pxFrameThresh = 75; % framewise displacement
     elseif contains(d.path,'PMC3')
-        dataset = "PMC3"; frameRate = 30; pxFrameThresh = 50; % framewise displacement
+        frameRate = 30; ops.pxFrameThresh = 50; % framewise displacement
     end
 end
 
-pxThresh = 150;
-
-likeThresh = [.7 .7 .7];
-consecOutThresh = frameRate;
-consecValThresh = frameRate;
-ampThresh = 100;
+ops.pxThresh = 150;
+ops.likeThresh = [.7 .7 .6];
+ops.consecOutThresh = frameRate;
+ops.consecValThresh = frameRate;
+ops.ampThresh = 100;
 
 %% load data
 tmp = h5read(behave_file,"/Facemap/lowerlip/x");
@@ -88,82 +88,24 @@ medPadEnd = median(KpLi(LEDoffFrame-frameRate:LEDoffFrame-1,:),1);
 medPadEnd(3:3:end) = 1;
 KpLi(LEDoffFrame:end,:) = repmat(medPadEnd,size(KpLi,1)-LEDoffFrame+1,1);
 
-%% remove outlier values
-lxx = find(contains(KpLiStr,'Like'));
-outlier.like = false(size(KpLi,1),numel(lxx));
-for lx = 1:numel(lxx)
-    outlier.like(KpLi(:,lxx(lx))<likeThresh(lx),lx) = true;    
-end
+%% Clean and interpolate data
+    [KpInterp, KpInterpMask,KpStr] = facemap_clean_int_data(KpLi, KpLiStr,ops);   
 
-txx = find(~contains(KpLiStr,'Like'));
-coorStr = repmat(['x' 'y'],1,numel(txx)/2);
-outlier.x = false(size(KpLi,1),numel(lxx));
-outlier.y = false(size(KpLi,1),numel(lxx));
-for tx = 1:numel(txx)
-    if contains(KpLiStr,'paw'); continue;end
-    outlier.(coorStr(tx))(abs(diff([KpLi(1,txx(tx));KpLi(:,txx(tx))]))>pxFrameThresh,ceil(txx(tx)/3)) = true;    
-    outlier.(coorStr(tx))(abs(KpLi(:,txx(tx))-median(KpLi(:,txx(tx))))>pxThresh,ceil(txx(tx)/3)) = true;    
-end
-
-outlier.all = outlier.like|outlier.x|outlier.y;
-consecOutNum = repelem(getConsecOutNum(outlier.all),1,2);
-consecOutNum([1:LEDonFrame-1 LEDoffFrame+1:end],:) = 0;
-
-% remove outlier frames
-KpClean = KpLi(:,txx);
-KpStr = KpLiStr(txx);
-for kx=1:size(KpClean,2)
-    KpClean(outlier.all(:,ceil(kx/2)),kx) = NaN;
-end
-
-%% interpolation of outlier frames
-KpInterp = NaN(size(KpClean));
-for kx=1:size(KpInterp,2)    
-    KpInterp(:,kx) = wavelet_based_impute(KpClean(:,kx), 'db2', 5, 'makima');
-end
-% remove imputed values in large gaps
-KpInterp(consecOutNum>consecOutThresh) = NaN;
-
-% remove signal if only sporadic and short <1 second. Most likely artifacts
-consecVals = getConsecOutNum(~isnan(KpInterp));
-KpInterp(consecVals<consecValThresh) = NaN;
-
-% remove paw episodes with max amplitude < amp_thresh
-pawx = find(contains(KpStr,'paw'),1);
-non_nan_idx = find(~isnan(KpInterp(:,pawx)));
-non_nan_idx(~ismember(non_nan_idx,LEDonFrame:LEDoffFrame)) = [];
-groups = splitvec(non_nan_idx);
-
-for i = 1:length(groups)
-    group = groups{i};
-    group_values = KpInterp(group,pawx:pawx+1);
-    group_range = max(group_values) - min(group_values);
-    % If the range is above the threshold, keep the values
-    if any(group_range < ampThresh)
-        KpInterp(group,pawx:pawx+1) = NaN;
-    end
-end
-
-% use linear interpolation to fill long gaps
-for kx = 1:size(KpInterp,2)
-    if any(isnan(KpInterp(:,kx)))
-        tmp = KpInterp(:,kx);
-        KpInterp(:,kx) = interp1(find(~isnan(tmp)),tmp(~isnan(tmp)),1:numel(tmp),'linear');        
-    end
-end
-
+%% handle warping (30Hz videos are affected)   
+% interpolate keypoint coordinates for timepoints of integer frameRate 
+% relevant when treating continuous data (CEBRA) not if looking at
+% trialwise dynamics
 if dewarp_align
-    %% handle warping (30Hz videos are affected)   
     if isfield(d.info,'timewarp_snout')
         if round(d.info(sid).timewarp_snout,3)~=1
             curr_warpfactor = d.info(sid).timewarp_snout;
             frame_time_warp = 1/(frameRate*curr_warpfactor);
             time_vec = (frame_time_warp:frame_time_warp:size(KpInterp,1)*frame_time_warp);
-            
+
             frame_time_stable = 1/frameRate;
             query_vec = (frame_time_stable:frame_time_stable:size(KpInterp,1)*frame_time_warp);
             LEDonFrame = round(LEDonFrame/curr_warpfactor);
-            
+
             tmp = KpInterp;
             KpInterp = NaN(numel(query_vec),size(KpInterp,2));
             for kx = 1:size(KpInterp,2)
@@ -171,10 +113,10 @@ if dewarp_align
             end
         end
     end
-    
+
     %% align video to intan
     video_intan_offset = LEDonFrame - round(digLEDon*frameRate);
-    
+
     if video_intan_offset>0
         KpInterp(1:video_intan_offset,:) = [];
     elseif video_intan_offset<0
