@@ -34,6 +34,7 @@ ops.likeThresh = [.7 .7 .6];
 ops.consecOutThresh = frameRate;
 ops.consecValThresh = frameRate;
 ops.ampThresh = 100;
+ops.plotOut = 0;
 
 %% load data
 tmp = h5read(behave_file,"/Facemap/lowerlip/x");
@@ -89,7 +90,7 @@ medPadEnd(3:3:end) = 1;
 KpLi(LEDoffFrame:end,:) = repmat(medPadEnd,size(KpLi,1)-LEDoffFrame+1,1);
 
 %% Clean and interpolate data
-    [KpInterp, KpInterpMask,KpStr] = facemap_clean_int_data(KpLi, KpLiStr,ops);   
+    [KpInterp, KpInterpMask,KpStr] = facemap_clean_int_data(KpLi, KpLiStr,ops,LEDonFrame,LEDoffFrame);   
 
 %% handle warping (30Hz videos are affected)   
 % interpolate keypoint coordinates for timepoints of integer frameRate 
@@ -126,4 +127,5 @@ if dewarp_align
 end
 
 KpInterp = KpInterp';
+KpInterpMask = KpInterpMask';
 end
